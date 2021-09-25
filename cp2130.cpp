@@ -1,4 +1,4 @@
-/* CP2130 class - Version 1.0.0
+/* CP2130 class - Version 1.0.1
    Copyright (c) 2021 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ bool CP2130::EventCounter::operator !=(const CP2130::EventCounter &other) const
 // "Equal to" operator for PinConfig
 bool CP2130::PinConfig::operator ==(const CP2130::PinConfig &other) const
 {
-    return gpio0 == other.gpio0 && gpio1 == other.gpio1 && gpio2 == other.gpio2 && gpio3 == other.gpio3 && gpio4 == other.gpio4 && gpio5 == other.gpio5 && gpio6 == other.gpio6 && gpio7 == other.gpio7 && gpio8 == other.gpio8 && gpio9 == other.gpio9 && gpio10 == other.gpio10 && sspndlvl == other.sspndlvl && sspndmode == other.sspndmode && wkupmask == other.wkupmask && wkupmatch == other.wkupmatch;
+    return gpio0 == other.gpio0 && gpio1 == other.gpio1 && gpio2 == other.gpio2 && gpio3 == other.gpio3 && gpio4 == other.gpio4 && gpio5 == other.gpio5 && gpio6 == other.gpio6 && gpio7 == other.gpio7 && gpio8 == other.gpio8 && gpio9 == other.gpio9 && gpio10 == other.gpio10 && sspndlvl == other.sspndlvl && sspndmode == other.sspndmode && wkupmask == other.wkupmask && wkupmatch == other.wkupmatch && divider == other.divider;
 }
 
 // "Not equal to" operator for PinConfig
