@@ -1,4 +1,4 @@
-/* CP2130 class - Version 1.0.1
+/* CP2130 class - Version 1.1.0
    Copyright (c) 2021 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
@@ -34,6 +34,8 @@ private:
     libusb_context *context_;
     libusb_device_handle *handle_;
     bool disconnected_, kernelAttached_;
+
+    void writeDescGeneric(const std::u16string &descriptor, uint8_t command, size_t tables, int &errcnt, std::string &errstr);
 
 public:
     // Class definitions
@@ -328,7 +330,7 @@ public:
     bool isOTPLocked(int &errcnt, std::string &errstr);
     bool isRTRActive(int &errcnt, std::string &errstr);
     void lockOTP(int &errcnt, std::string &errstr);
-    int open(uint16_t vid, uint16_t pid, const std::string &serial);
+    int open(uint16_t vid, uint16_t pid, const std::string &serial = std::string());
     void reset(int &errcnt, std::string &errstr);
     void selectCS(uint8_t channel, int &errcnt, std::string &errstr);
     void setClockDivider(uint8_t value, int &errcnt, std::string &errstr);
