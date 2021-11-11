@@ -47,9 +47,9 @@ public:
     static const int ERROR_BUSY = 3;       // Returned by open() if the device is already in use
 
     // Descriptor specific definitions
-    static const size_t DESCMAX_MANUFACTURER = 62;  // Maximum length of manufacturer descriptor
-    static const size_t DESCMAX_PRODUCT = 62;       // Maximum length of product descriptor
-    static const size_t DESCMAX_SERIAL = 30;        // Maximum length of serial descriptor
+    static const size_t DESCMXL_MANUFACTURER = 62;  // Maximum length of manufacturer descriptor
+    static const size_t DESCMXL_PRODUCT = 62;       // Maximum length of product descriptor
+    static const size_t DESCMXL_SERIAL = 30;        // Maximum length of serial descriptor
 
     // OTP ROM specific definitions
     static const size_t PROM_BLOCKS = 8;                            // Number of blocks of the OTP ROM
