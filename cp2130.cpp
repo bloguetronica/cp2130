@@ -693,13 +693,14 @@ int CP2130::open(uint16_t vid, uint16_t pid, const std::string &serial)
         if (libusb_init(&context_) != 0) {  // Initialize libusb. In case of failure
             retval = ERROR_INIT;
         } else {  // If libusb is initialized
-            char serialcstr[serial.size() + 1];
+            char *serialcstr = new char[serial.size() + 1];  // Allocated dynamically since version 1.1.0
             std::strcpy(serialcstr, serial.c_str());
             if (serial.empty()) {  // Note that serial, by omission, is an empty string
                 handle_ = libusb_open_device_with_vid_pid(context_, vid, pid);  // If no serial number is specified, this will open the first device found with matching VID and PID
             } else {
                 handle_ = libusb_open_device_with_vid_pid_serial(context_, vid, pid, reinterpret_cast<unsigned char *>(serialcstr));
             }
+            delete[] serialcstr;
             if (handle_ == nullptr) {  // If the previous operation fails to get a device handle
                 libusb_exit(context_);  // Deinitialize libusb
                 retval = ERROR_NOT_FOUND;
@@ -871,13 +872,14 @@ std::vector<uint8_t> CP2130::spiRead(uint32_t bytesToRead, uint8_t endpointInAdd
     int bytesWritten;
     bulkTransfer(endpointOutAddr, readCommandBuffer, static_cast<int>(sizeof(readCommandBuffer)), &bytesWritten, errcnt, errstr);
 #endif
-    unsigned char readInputBuffer[bytesToRead];
+    unsigned char *readInputBuffer = new unsigned char[bytesToRead];  // Allocated dynamically since version 1.1.0
     int bytesRead = 0;  // Important!
-    bulkTransfer(endpointInAddr, readInputBuffer, static_cast<int>(sizeof(readInputBuffer)), &bytesRead, errcnt, errstr);
+    bulkTransfer(endpointInAddr, readInputBuffer, bytesToRead, &bytesRead, errcnt, errstr);
     std::vector<uint8_t> retdata(bytesRead);
     for (int i = 0; i < bytesRead; ++i) {
         retdata[i] = readInputBuffer[i];
     }
+    delete[] readInputBuffer;
     return retdata;
 }
 
@@ -892,7 +894,8 @@ std::vector<uint8_t> CP2130::spiRead(uint32_t bytesToRead, int &errcnt, std::str
 void CP2130::spiWrite(const std::vector<uint8_t> &data, uint8_t endpointOutAddr, int &errcnt, std::string &errstr)
 {
     uint32_t bytesToWrite = static_cast<uint32_t>(data.size());
-    unsigned char writeCommandBuffer[bytesToWrite + 8] = {
+    int bufsize = bytesToWrite + 8;
+    unsigned char *writeCommandBuffer = new unsigned char[bufsize] {  // Allocated dynamically since version 1.1.0
         0x00, 0x00,     // Reserved
         CP2130::WRITE,  // Write command
         0x00,           // Reserved
@@ -905,11 +908,12 @@ void CP2130::spiWrite(const std::vector<uint8_t> &data, uint8_t endpointOutAddr,
         writeCommandBuffer[i + 8] = data[i];
     }
 #if LIBUSB_API_VERSION >= 0x01000105
-    bulkTransfer(endpointOutAddr, writeCommandBuffer, static_cast<int>(sizeof(writeCommandBuffer)), nullptr, errcnt, errstr);
+    bulkTransfer(endpointOutAddr, writeCommandBuffer, bufsize, nullptr, errcnt, errstr);
 #else
     int bytesWritten;
-    bulkTransfer(endpointOutAddr, writeCommandBuffer, static_cast<int>(sizeof(writeCommandBuffer)), &bytesWritten, errcnt, errstr);
+    bulkTransfer(endpointOutAddr, writeCommandBuffer, bufsize, &bytesWritten, errcnt, errstr);
 #endif
+    delete[] writeCommandBuffer;
 }
 
 // This function is a shorthand version of the previous one (the endpoint OUT address is automatically deduced at the cost of decreased speed)
