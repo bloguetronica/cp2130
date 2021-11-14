@@ -35,7 +35,8 @@ private:
     libusb_device_handle *handle_;
     bool disconnected_, kernelAttached_;
 
-    void writeDescGeneric(const std::u16string &descriptor, uint8_t command, size_t tables, int &errcnt, std::string &errstr);
+    std::u16string getDescGeneric(uint8_t command, int &errcnt, std::string &errstr);
+    void writeDescGeneric(const std::u16string &descriptor, uint8_t command, int &errcnt, std::string &errstr);
 
 public:
     // Class definitions
@@ -92,46 +93,84 @@ public:
     static const uint8_t READWITHRTR = 0x04;  // ReadWithRTR command
 
     // The following values are applicable to controlTransfer()
-    static const uint8_t GET = 0xC0;                         // Device-to-Host vendor request
-    static const uint8_t SET = 0x40;                         // Host-to-Device vendor request
-    static const uint8_t RESET_DEVICE = 0x10;                // Reset_Device command
-    static const uint8_t GET_READONLY_VERSION = 0x11;        // Get_ReadOnly_Version command
-    static const uint8_t GET_GPIO_VALUES = 0x20;             // Get_GPIO_Values command
-    static const uint8_t SET_GPIO_VALUES = 0x21;             // Set_GPIO_Values command
-    static const uint8_t GET_GPIO_MODE_AND_LEVEL = 0x22;     // Get_GPIO_Mode_And_Level command
-    static const uint8_t SET_GPIO_MODE_AND_LEVEL = 0x23;     // Set_GPIO_Mode_And_Level command
-    static const uint8_t GET_GPIO_CHIP_SELECT = 0x24;        // Get_GPIO_Chip_Select command
-    static const uint8_t SET_GPIO_CHIP_SELECT = 0x25;        // Set_GPIO_Chip_Select command
-    static const uint8_t GET_SPI_WORD = 0x30;                // Get_SPI_Word command
-    static const uint8_t SET_SPI_WORD = 0x31;                // Set_SPI_Word command
-    static const uint8_t GET_SPI_DELAY = 0x32;               // Get_SPI_Delay command
-    static const uint8_t SET_SPI_DELAY = 0x33;               // Set_SPI_Delay command
-    static const uint8_t GET_FULL_THRESHOLD = 0x34;          // Get_Full_Threshold command
-    static const uint8_t SET_FULL_THRESHOLD = 0x35;          // Set_Full_Threshold command
-    static const uint8_t GET_RTR_STATE = 0x36;               // Get_RTR_State command
-    static const uint8_t SET_RTR_STOP = 0x37;                // Set_RTR_Stop command
-    static const uint8_t GET_EVENT_COUNTER = 0x44;           // Get_Event_Counter command
-    static const uint8_t SET_EVENT_COUNTER = 0x45;           // Set_Event_Counter command
-    static const uint8_t GET_CLOCK_DIVIDER = 0x46;           // Get_Clock_Divider command
-    static const uint8_t SET_CLOCK_DIVIDER = 0x47;           // Set_Clock_Divider command
-    static const uint8_t GET_USB_CONFIG = 0x60;              // Get_USB_Config command
-    static const uint8_t SET_USB_CONFIG = 0x61;              // Set_USB_Config command
-    static const uint8_t GET_MANUFACTURING_STRING_1 = 0x62;  // Get_Manufacturing_String_1 command
-    static const uint8_t SET_MANUFACTURING_STRING_1 = 0x63;  // Set_Manufacturing_String_1 command
-    static const uint8_t GET_MANUFACTURING_STRING_2 = 0x64;  // Get_Manufacturing_String_2 command
-    static const uint8_t SET_MANUFACTURING_STRING_2 = 0x65;  // Set_Manufacturing_String_2 command
-    static const uint8_t GET_PRODUCT_STRING_1 = 0x66;        // Get_Product_String_1 command
-    static const uint8_t SET_PRODUCT_STRING_1 = 0x67;        // Set_Product_String_1 command
-    static const uint8_t GET_PRODUCT_STRING_2 = 0x68;        // Get_Product_String_2 command
-    static const uint8_t SET_PRODUCT_STRING_2 = 0x69;        // Set_Product_String_2 command
-    static const uint8_t GET_SERIAL_STRING = 0x6A;           // Get_Serial_String command
-    static const uint8_t SET_SERIAL_STRING = 0x6B;           // Set_Serial_String command
-    static const uint8_t GET_PIN_CONFIG = 0x6C;              // Get_Pin_Config command
-    static const uint8_t SET_PIN_CONFIG = 0x6D;              // Set_Pin_Config command
-    static const uint8_t GET_LOCK_BYTE = 0x6E;               // Get_Lock_Byte command
-    static const uint8_t SET_LOCK_BYTE = 0x6F;               // Set_Lock_Byte command
-    static const uint8_t GET_PROM_CONFIG = 0x70;             // Get_PROM_Config command
-    static const uint8_t SET_PROM_CONFIG = 0x71;             // Set_PROM_Config command
+    static const uint8_t GET = 0xC0;                                 // Device-to-Host vendor request
+    static const uint8_t SET = 0x40;                                 // Host-to-Device vendor request
+    static const uint8_t RESET_DEVICE = 0x10;                        // Reset_Device command
+    static const uint16_t RESET_DEVICE_WLEN = 0x0000;                // Reset_Device data stage length
+    static const uint8_t GET_READONLY_VERSION = 0x11;                // Get_ReadOnly_Version command
+    static const uint16_t GET_READONLY_VERSION_WLEN = 0x0002;        // Get_ReadOnly_Version data stage length
+    static const uint8_t GET_GPIO_VALUES = 0x20;                     // Get_GPIO_Values command
+    static const uint16_t GET_GPIO_VALUES_WLEN = 0x0002;             // Get_GPIO_Values data stage length
+    static const uint8_t SET_GPIO_VALUES = 0x21;                     // Set_GPIO_Values command
+    static const uint16_t SET_GPIO_VALUES_WLEN = 0x0004;             // Set_GPIO_Values data stage length
+    static const uint8_t GET_GPIO_MODE_AND_LEVEL = 0x22;             // Get_GPIO_Mode_And_Level command
+    static const uint16_t GET_GPIO_MODE_AND_LEVEL_WLEN = 0x0004;     // Get_GPIO_Mode_And_Level data stage length
+    static const uint8_t SET_GPIO_MODE_AND_LEVEL = 0x23;             // Set_GPIO_Mode_And_Level command
+    static const uint16_t SET_GPIO_MODE_AND_LEVEL_WLEN = 0x0003;     // Set_GPIO_Mode_And_Level data stage length
+    static const uint8_t GET_GPIO_CHIP_SELECT = 0x24;                // Get_GPIO_Chip_Select command
+    static const uint16_t GET_GPIO_CHIP_SELECT_WLEN = 0x0004;        // Get_GPIO_Chip_Select data stage length
+    static const uint8_t SET_GPIO_CHIP_SELECT = 0x25;                // Set_GPIO_Chip_Select command
+    static const uint16_t SET_GPIO_CHIP_SELECT_WLEN = 0x0002;        // Set_GPIO_Chip_Select data stage length
+    static const uint8_t GET_SPI_WORD = 0x30;                        // Get_SPI_Word command
+    static const uint16_t GET_SPI_WORD_WLEN = 0x000B;                // Get_SPI_Word data stage length
+    static const uint8_t SET_SPI_WORD = 0x31;                        // Set_SPI_Word command
+    static const uint16_t SET_SPI_WORD_WLEN = 0x0002;                // Set_SPI_Word data stage length
+    static const uint8_t GET_SPI_DELAY = 0x32;                       // Get_SPI_Delay command
+    static const uint16_t GET_SPI_DELAY_WLEN = 0x0008;               // Get_SPI_Delay data stage length
+    static const uint8_t SET_SPI_DELAY = 0x33;                       // Set_SPI_Delay command
+    static const uint16_t SET_SPI_DELAY_WLEN = 0x0008;               // Set_SPI_Delay data stage length
+    static const uint8_t GET_FULL_THRESHOLD = 0x34;                  // Get_Full_Threshold command
+    static const uint16_t GET_FULL_THRESHOLD_WLEN = 0x0001;          // Get_Full_Threshold data stage length
+    static const uint8_t SET_FULL_THRESHOLD = 0x35;                  // Set_Full_Threshold command
+    static const uint16_t SET_FULL_THRESHOLD_WLEN = 0x0001;          // Set_Full_Threshold data stage length
+    static const uint8_t GET_RTR_STATE = 0x36;                       // Get_RTR_State command
+    static const uint16_t GET_RTR_STATE_WLEN = 0x0001;               // Get_RTR_State data stage length
+    static const uint8_t SET_RTR_STOP = 0x37;                        // Set_RTR_Stop command
+    static const uint16_t SET_RTR_STOP_WLEN = 0x0001;                // Set_RTR_Stop data stage length
+    static const uint8_t GET_EVENT_COUNTER = 0x44;                   // Get_Event_Counter command
+    static const uint16_t GET_EVENT_COUNTER_WLEN = 0x0003;           // Get_Event_Counter data stage length
+    static const uint8_t SET_EVENT_COUNTER = 0x45;                   // Set_Event_Counter command
+    static const uint16_t SET_EVENT_COUNTER_WLEN = 0x0003;           // Set_Event_Counter data stage length
+    static const uint8_t GET_CLOCK_DIVIDER = 0x46;                   // Get_Clock_Divider command
+    static const uint16_t GET_CLOCK_DIVIDER_WLEN = 0x0001;           // Get_Clock_Divider data stage length
+    static const uint8_t SET_CLOCK_DIVIDER = 0x47;                   // Set_Clock_Divider command
+    static const uint16_t SET_CLOCK_DIVIDER_WLEN = 0x0001;           // Set_Clock_Divider data stage length
+    static const uint8_t GET_USB_CONFIG = 0x60;                      // Get_USB_Config command
+    static const uint16_t GET_USB_CONFIG_WLEN = 0x0009;              // Get_USB_Config data stage length
+    static const uint8_t SET_USB_CONFIG = 0x61;                      // Set_USB_Config command
+    static const uint16_t SET_USB_CONFIG_WLEN = 0x000A;              // Set_USB_Config data stage length
+    static const uint8_t GET_MANUFACTURING_STRING_1 = 0x62;          // Get_Manufacturing_String_1 command
+    static const uint16_t GET_MANUFACTURING_STRING_1_WLEN = 0x0040;  // Get_Manufacturing_String_1 data stage length
+    static const uint8_t SET_MANUFACTURING_STRING_1 = 0x63;          // Set_Manufacturing_String_1 command
+    static const uint16_t SET_MANUFACTURING_STRING_1_WLEN = 0x0040;  // Set_Manufacturing_String_1 data stage length
+    static const uint8_t GET_MANUFACTURING_STRING_2 = 0x64;          // Get_Manufacturing_String_2 command
+    static const uint16_t GET_MANUFACTURING_STRING_2_WLEN = 0x0040;  // Get_Manufacturing_String_2 data stage length
+    static const uint8_t SET_MANUFACTURING_STRING_2 = 0x65;          // Set_Manufacturing_String_2 command
+    static const uint16_t SET_MANUFACTURING_STRING_2_WLEN = 0x0040;  // Set_Manufacturing_String_2 data stage length
+    static const uint8_t GET_PRODUCT_STRING_1 = 0x66;                // Get_Product_String_1 command
+    static const uint16_t GET_PRODUCT_STRING_1_WLEN = 0x0040;        // Get_Product_String_1 data stage length
+    static const uint8_t SET_PRODUCT_STRING_1 = 0x67;                // Set_Product_String_1 command
+    static const uint16_t SET_PRODUCT_STRING_1_WLEN = 0x0040;        // Set_Product_String_1 data stage length
+    static const uint8_t GET_PRODUCT_STRING_2 = 0x68;                // Get_Product_String_2 command
+    static const uint16_t GET_PRODUCT_STRING_2_WLEN = 0x0040;        // Get_Product_String_2 data stage length
+    static const uint8_t SET_PRODUCT_STRING_2 = 0x69;                // Set_Product_String_2 command
+    static const uint16_t SET_PRODUCT_STRING_2_WLEN = 0x0040;        // Set_Product_String_2 data stage length
+    static const uint8_t GET_SERIAL_STRING = 0x6A;                   // Get_Serial_String command
+    static const uint16_t GET_SERIAL_STRING_WLEN = 0x0040;           // Get_Serial_String data stage length
+    static const uint8_t SET_SERIAL_STRING = 0x6B;                   // Set_Serial_String command
+    static const uint16_t SET_SERIAL_STRING_WLEN = 0x0040;           // Set_Serial_String data stage length
+    static const uint8_t GET_PIN_CONFIG = 0x6C;                      // Get_Pin_Config command
+    static const uint16_t GET_PIN_CONFIG_WLEN = 0x0014;              // Get_Pin_Config data stage length
+    static const uint8_t SET_PIN_CONFIG = 0x6D;                      // Set_Pin_Config command
+    static const uint16_t SET_PIN_CONFIG_WLEN = 0x0014;              // Set_Pin_Config data stage length
+    static const uint8_t GET_LOCK_BYTE = 0x6E;                       // Get_Lock_Byte command
+    static const uint16_t GET_LOCK_BYTE_WLEN = 0x0002;               // Get_Lock_Byte data stage length
+    static const uint8_t SET_LOCK_BYTE = 0x6F;                       // Set_Lock_Byte command
+    static const uint16_t SET_LOCK_BYTE_WLEN = 0x0002;               // Set_Lock_Byte data stage length
+    static const uint8_t GET_PROM_CONFIG = 0x70;                     // Get_PROM_Config command
+    static const uint16_t GET_PROM_CONFIG_WLEN = 0x0040;             // Get_PROM_Config data stage length
+    static const uint8_t SET_PROM_CONFIG = 0x71;                     // Set_PROM_Config command
+    static const uint16_t SET_PROM_CONFIG_WLEN = 0x0040;             // Set_PROM_Config data stage length
 
     // The following masks are applicable to the value returned by getLockWord()
     static const uint16_t LWVID = 0x0001;      // Mask for the vendor ID lock bit
