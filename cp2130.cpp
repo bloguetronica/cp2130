@@ -693,14 +693,14 @@ int CP2130::open(uint16_t vid, uint16_t pid, const std::string &serial)
         if (libusb_init(&context_) != 0) {  // Initialize libusb. In case of failure
             retval = ERROR_INIT;
         } else {  // If libusb is initialized
-            char *serialcstr = new char[serial.size() + 1];  // Allocated dynamically since version 1.1.0
-            std::strcpy(serialcstr, serial.c_str());
             if (serial.empty()) {  // Note that serial, by omission, is an empty string
                 handle_ = libusb_open_device_with_vid_pid(context_, vid, pid);  // If no serial number is specified, this will open the first device found with matching VID and PID
             } else {
+                char *serialcstr = new char[serial.size() + 1];  // Allocated dynamically since version 1.1.0
+                std::strcpy(serialcstr, serial.c_str());
                 handle_ = libusb_open_device_with_vid_pid_serial(context_, vid, pid, reinterpret_cast<unsigned char *>(serialcstr));
+                delete[] serialcstr;
             }
-            delete[] serialcstr;
             if (handle_ == nullptr) {  // If the previous operation fails to get a device handle
                 libusb_exit(context_);  // Deinitialize libusb
                 retval = ERROR_NOT_FOUND;
