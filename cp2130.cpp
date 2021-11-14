@@ -1045,8 +1045,7 @@ std::list<std::string> CP2130::listDevices(uint16_t vid, uint16_t pid, int &errc
                     if (libusb_open(devs[i], &handle) == 0) {  // Open the listed device. If successfull
                         unsigned char str_desc[256];
                         libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, str_desc, static_cast<int>(sizeof(str_desc)));  // Get the serial number string in ASCII format
-                        std::string serial(reinterpret_cast<char *>(str_desc));
-                        devices.push_back(serial);  // Add the serial number string to the list
+                        devices.push_back(std::string(reinterpret_cast<char *>(str_desc)));  // Add the serial number string to the list
                         libusb_close(handle);  // Close the device
                     }
                 }
