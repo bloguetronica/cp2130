@@ -1,4 +1,4 @@
-/* CP2130 class - Version 1.1.0
+/* CP2130 class - Version 1.1.1
    Copyright (c) 2021 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
@@ -78,7 +78,7 @@ void CP2130::writeDescGeneric(const std::u16string &descriptor, uint8_t command,
         size_t start = i == 0 ? 2 : 0;
         size_t offset = DESC_IDXINCR * i;
         for (size_t j = start; j < DESC_IDXINCR; ++j) {
-            if (j < length - offset) {
+            if (offset + j < length) {  // Rewritten in version 1.1.1 in order to fix a possible bug
                 controlBufferOut[j] = static_cast<uint8_t>(descriptor[(offset + j - 2) / 2] >> ((i + j) % 2 == 0 ? 0 : 8));
             } else {
                 controlBufferOut[j] = 0x00;
