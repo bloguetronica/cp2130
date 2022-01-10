@@ -1,5 +1,5 @@
-/* CP2130 class - Version 1.1.1
-   Copyright (c) 2021 Samuel Lourenço
+/* CP2130 class - Version 1.2.0
+   Copyright (c) 2021-2022 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published by
@@ -33,7 +33,7 @@ class CP2130
 private:
     libusb_context *context_;
     libusb_device_handle *handle_;
-    bool disconnected_, kernelAttached_;
+    bool disconnected_, kernelWasAttached_;
 
     std::u16string getDescGeneric(uint8_t command, int &errcnt, std::string &errstr);
     void writeDescGeneric(const std::u16string &descriptor, uint8_t command, int &errcnt, std::string &errstr);
@@ -197,10 +197,10 @@ public:
     static const uint8_t CFRQ375K = 0x05;   // Value corresponding to a clock frequency of 375KHz
     static const uint8_t CFRQ1875= 0x06;    // Value corresponding to a clock frequency of 187.5KHz
     static const uint8_t CFRQ938 = 0x07;    // Value corresponding to a clock frequency of 93.8KHz
-    static const bool CPOL0 = false;        // Boolean corresponding to CPOL = 0
-    static const bool CPOL1 = true;         // Boolean corresponding to CPOL = 1
-    static const bool CPHA0 = false;        // Boolean corresponding to CPHA = 0
-    static const bool CPHA1 = true;         // Boolean corresponding to CPHA = 1
+    static const bool CPOL0 = false;        // Boolean corresponding to CPOL = 0 (clock is active high and idles low)
+    static const bool CPOL1 = true;         // Boolean corresponding to CPOL = 1 (clock is active low and idles high)
+    static const bool CPHA0 = false;        // Boolean corresponding to CPHA = 0 (data is valid on the leading edge of the clock)
+    static const bool CPHA1 = true;         // Boolean corresponding to CPHA = 1 (data is valid on the trailing edge of the clock)
 
     // The following values are applicable to PinConfig/getPinConfig()/writePinConfig()
     static const uint8_t PCIN = 0x00;         // GPIO as input - Also applicable to configureGPIO()
@@ -396,6 +396,8 @@ public:
     std::vector<uint8_t> spiRead(uint32_t bytesToRead, int &errcnt, std::string &errstr);
     void spiWrite(const std::vector<uint8_t> &data, uint8_t endpointOutAddr, int &errcnt, std::string &errstr);
     void spiWrite(const std::vector<uint8_t> &data, int &errcnt, std::string &errstr);
+    std::vector<uint8_t> spiWriteRead(const std::vector<uint8_t> &data, uint8_t endpointInAddr, uint8_t endpointOutAddr, int &errcnt, std::string &errstr);
+    std::vector<uint8_t> spiWriteRead(const std::vector<uint8_t> &data, int &errcnt, std::string &errstr);
     void stopRTR(int &errcnt, std::string &errstr);
     void writeLockWord(uint16_t word, int &errcnt, std::string &errstr);
     void writeManufacturerDesc(const std::u16string &manufacturer, int &errcnt, std::string &errstr);

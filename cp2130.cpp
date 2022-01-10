@@ -1,5 +1,5 @@
-/* CP2130 class - Version 1.1.1
-   Copyright (c) 2021 Samuel Lourenço
+/* CP2130 class - Version 1.2.0
+   Copyright (c) 2021-2022 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published by
@@ -31,7 +31,7 @@ extern "C" {
 const unsigned int TR_TIMEOUT = 500;  // Transfer timeout in milliseconds
 
 // Specific to getDescGeneric() and writeDescGeneric() (added in version 1.1.0)
-const uint16_t DESC_TBLSIZE = 0x0040;           // Descriptor table size, including preamble [64]
+const uint16_t DESC_TBLSIZE = 0x0040;          // Descriptor table size, including preamble [64]
 const size_t DESC_MAXIDX = DESC_TBLSIZE - 2;   // Maximum usable index [62]
 const size_t DESC_IDXINCR = DESC_TBLSIZE - 1;  // Index increment or step between table preambles [63]
 
@@ -200,7 +200,7 @@ CP2130::CP2130() :
     context_(nullptr),
     handle_(nullptr),
     disconnected_(false),
-    kernelAttached_(false)
+    kernelWasAttached_(false)
 {
 }
 
@@ -258,7 +258,7 @@ void CP2130::close()
 {
     if (isOpen()) {  // This condition avoids a segmentation fault if the calling algorithm tries, for some reason, to close the same device twice (e.g., if the device is already closed when the destructor is called)
         libusb_release_interface(handle_, 0);  // Release the interface
-        if (kernelAttached_) {  // If a kernel driver was attached to the interface before
+        if (kernelWasAttached_) {  // If a kernel driver was attached to the interface before
             libusb_attach_kernel_driver(handle_, 0);  // Reattach the kernel driver
         }
         libusb_close(handle_);  // Close the device
@@ -707,12 +707,12 @@ int CP2130::open(uint16_t vid, uint16_t pid, const std::string &serial)
             } else {  // If the device is successfully opened and a handle obtained
                 if (libusb_kernel_driver_active(handle_, 0) == 1) {  // If a kernel driver is active on the interface
                     libusb_detach_kernel_driver(handle_, 0);  // Detach the kernel driver
-                    kernelAttached_ = true;  // Flag that the kernel driver was attached
+                    kernelWasAttached_ = true;  // Flag that the kernel driver was attached
                 } else {
-                    kernelAttached_ = false;  // The kernel driver was not attached
+                    kernelWasAttached_ = false;  // The kernel driver was not attached
                 }
                 if (libusb_claim_interface(handle_, 0) != 0) {  // Claim the interface. In case of failure
-                    if (kernelAttached_) {  // If a kernel driver was attached to the interface before
+                    if (kernelWasAttached_) {  // If a kernel driver was attached to the interface before
                         libusb_attach_kernel_driver(handle_, 0);  // Reattach the kernel driver
                     }
                     libusb_close(handle_);  // Close the device
@@ -874,7 +874,7 @@ std::vector<uint8_t> CP2130::spiRead(uint32_t bytesToRead, uint8_t endpointInAdd
 #endif
     unsigned char *readInputBuffer = new unsigned char[bytesToRead];  // Allocated dynamically since version 1.1.0
     int bytesRead = 0;  // Important!
-    bulkTransfer(endpointInAddr, readInputBuffer, bytesToRead, &bytesRead, errcnt, errstr);
+    bulkTransfer(endpointInAddr, readInputBuffer, static_cast<int>(bytesToRead), &bytesRead, errcnt, errstr);
     std::vector<uint8_t> retdata(bytesRead);
     for (int i = 0; i < bytesRead; ++i) {
         retdata[i] = readInputBuffer[i];
@@ -920,6 +920,53 @@ void CP2130::spiWrite(const std::vector<uint8_t> &data, uint8_t endpointOutAddr,
 void CP2130::spiWrite(const std::vector<uint8_t> &data, int &errcnt, std::string &errstr)
 {
     spiWrite(data, getEndpointOutAddr(errcnt, errstr), errcnt, errstr);
+}
+
+// Writes to the SPI bus while reading back, returning a vector of the same size as the one given
+// This is the prefered method of writing and reading, if both endpoint addresses are known
+std::vector<uint8_t> CP2130::spiWriteRead(const std::vector<uint8_t> &data, uint8_t endpointInAddr, uint8_t endpointOutAddr, int &errcnt, std::string &errstr)
+{
+    size_t bytesToWriteRead = data.size();
+    size_t bytesLeft = bytesToWriteRead;
+    std::vector<uint8_t> retdata;
+    while (bytesLeft > 0) {
+        int payload = bytesLeft > 56 ? 56 : bytesLeft;
+        int bufsize = payload + 8;
+        unsigned char *writeReadCommandBuffer = new unsigned char[bufsize] {
+            0x00, 0x00,         // Reserved
+            CP2130::WRITEREAD,  // WriteRead command
+            0x00,               // Reserved
+            static_cast<uint8_t>(payload),
+            static_cast<uint8_t>(payload >> 8),
+            static_cast<uint8_t>(payload >> 16),
+            static_cast<uint8_t>(payload >> 24)
+        };
+        for (int i = 0; i < payload; ++i) {
+            writeReadCommandBuffer[i + 8] = data[bytesToWriteRead - bytesLeft + i];
+        }
+#if LIBUSB_API_VERSION >= 0x01000105
+        bulkTransfer(endpointOutAddr, writeReadCommandBuffer, bufsize, nullptr, errcnt, errstr);
+#else
+        int bytesWritten;
+        bulkTransfer(endpointOutAddr, writeReadCommandBuffer, bufsize, &bytesWritten, errcnt, errstr);
+#endif
+        delete[] writeReadCommandBuffer;
+        unsigned char *writeReadInputBuffer = new unsigned char[payload];
+        int bytesRead = 0;  // Important!
+        bulkTransfer(endpointInAddr, writeReadInputBuffer, payload, &bytesRead, errcnt, errstr);
+        for (int i = 0; i < bytesRead; ++i) {
+            retdata.push_back(writeReadInputBuffer[i]);
+        }
+        delete[] writeReadInputBuffer;
+        bytesLeft -= payload;
+    }
+    return retdata;
+}
+
+// This function is a shorthand version of the previous one (both endpoint addresses are automatically deduced, at the cost of decreased speed)
+std::vector<uint8_t> CP2130::spiWriteRead(const std::vector<uint8_t> &data, int &errcnt, std::string &errstr)
+{
+    return spiWriteRead(data, getEndpointInAddr(errcnt, errstr), getEndpointOutAddr(errcnt, errstr), errcnt, errstr);
 }
 
 // Aborts the current ReadWithRTR command
