@@ -1,4 +1,4 @@
-/* CP2130 class - Version 1.2.0
+/* CP2130 class - Version 1.2.1
    Copyright (c) 2021-2022 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
@@ -225,12 +225,12 @@ bool CP2130::isOpen() const
 void CP2130::bulkTransfer(uint8_t endpointAddr, unsigned char *data, int length, int *transferred, int &errcnt, std::string &errstr)
 {
     if (!isOpen()) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In bulkTransfer(): device is not open.\n";  // Program logic error
     } else {
         int result = libusb_bulk_transfer(handle_, endpointAddr, data, length, transferred, TR_TIMEOUT);
         if (result != 0 || (transferred != nullptr && *transferred != length)) {  // The number of transferred bytes is also verified, as long as a valid (non-null) pointer is passed via "transferred"
-            errcnt += 1;
+            ++errcnt;
             std::ostringstream stream;
             if (endpointAddr < 0x80) {
                 stream << "Failed bulk OUT transfer to endpoint "
@@ -272,7 +272,7 @@ void CP2130::close()
 void CP2130::configureGPIO(uint8_t pin, uint8_t mode, bool value,  int &errcnt, std::string &errstr)
 {
     if (pin > 10) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In configureGPIO(): Pin number must be between 0 and 10.\n";  // Program logic error
     } else {
         unsigned char controlBufferOut[SET_GPIO_MODE_AND_LEVEL_WLEN] = {
@@ -288,7 +288,7 @@ void CP2130::configureGPIO(uint8_t pin, uint8_t mode, bool value,  int &errcnt, 
 void CP2130::configureSPIDelays(uint8_t channel, const SPIDelays &delays, int &errcnt, std::string &errstr)
 {
     if (channel > 10) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In configureSPIDelays(): SPI channel value must be between 0 and 10.\n";  // Program logic error
     } else {
         unsigned char controlBufferOut[SET_SPI_DELAY_WLEN] = {
@@ -306,7 +306,7 @@ void CP2130::configureSPIDelays(uint8_t channel, const SPIDelays &delays, int &e
 void CP2130::configureSPIMode(uint8_t channel, const SPIMode &mode, int &errcnt, std::string &errstr)
 {
     if (channel > 10) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In configureSPIMode(): SPI channel value must be between 0 and 10.\n";  // Program logic error
     } else {
         unsigned char controlBufferOut[SET_SPI_WORD_WLEN] = {
@@ -321,12 +321,12 @@ void CP2130::configureSPIMode(uint8_t channel, const SPIMode &mode, int &errcnt,
 void CP2130::controlTransfer(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, unsigned char *data, uint16_t wLength, int &errcnt, std::string &errstr)
 {
     if (!isOpen()) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In controlTransfer(): device is not open.\n";  // Program logic error
     } else {
         int result = libusb_control_transfer(handle_, bmRequestType, bRequest, wValue, wIndex, data, wLength, TR_TIMEOUT);
         if (result != wLength) {
-            errcnt += 1;
+            ++errcnt;
             std::ostringstream stream;
             stream << "Failed control transfer (0x"
                    << std::hex << std::setfill ('0') << std::setw(2) << static_cast<int>(bmRequestType)
@@ -345,7 +345,7 @@ void CP2130::controlTransfer(uint8_t bmRequestType, uint8_t bRequest, uint16_t w
 void CP2130::disableCS(uint8_t channel, int &errcnt, std::string &errstr)
 {
     if (channel > 10) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In disableCS(): SPI channel value must be between 0 and 10.\n";  // Program logic error
     } else {
         unsigned char controlBufferOut[SET_GPIO_CHIP_SELECT_WLEN] = {
@@ -360,7 +360,7 @@ void CP2130::disableCS(uint8_t channel, int &errcnt, std::string &errstr)
 void CP2130::disableSPIDelays(uint8_t channel, int &errcnt, std::string &errstr)
 {
     if (channel > 10) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In disableSPIDelays(): SPI channel value must be between 0 and 10.\n";  // Program logic error
     } else {
         unsigned char controlBufferOut[SET_SPI_DELAY_WLEN] = {
@@ -378,7 +378,7 @@ void CP2130::disableSPIDelays(uint8_t channel, int &errcnt, std::string &errstr)
 void CP2130::enableCS(uint8_t channel, int &errcnt, std::string &errstr)
 {
     if (channel > 10) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In enableCS(): SPI channel value must be between 0 and 10.\n";  // Program logic error
     } else {
         unsigned char controlBufferOut[SET_GPIO_CHIP_SELECT_WLEN] = {
@@ -402,7 +402,7 @@ bool CP2130::getCS(uint8_t channel, int &errcnt, std::string &errstr)
 {
     bool cs;
     if (channel > 10) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In getCS(): SPI channel value must be between 0 and 10.\n";  // Program logic error
         cs = false;
     } else {
@@ -432,7 +432,7 @@ CP2130::EventCounter CP2130::getEventCounter(int &errcnt, std::string &errstr)
     controlTransfer(GET, GET_EVENT_COUNTER, 0x0000, 0x0000, controlBufferIn, GET_EVENT_COUNTER_WLEN, errcnt, errstr);
     CP2130::EventCounter evtcntr;
     evtcntr.overflow = (0x80 & controlBufferIn[0]) != 0x00;                               // Event counter overflow bit corresponds to bit 7 of byte 0
-    evtcntr.mode = 0x07 & controlBufferIn[0];                                             // GPIO.4/EVTCNTR pin mode corresponds to bits 3:0 of byte 0
+    evtcntr.mode = 0x07 & controlBufferIn[0];                                             // GPIO.4/EVTCNTR pin mode corresponds to bits 2:0 of byte 0
     evtcntr.value = static_cast<uint16_t>(controlBufferIn[1] << 8 | controlBufferIn[2]);  // Event count value corresponds to bytes 1 and 2 (big-endian conversion)
     return evtcntr;
 }
@@ -600,7 +600,7 @@ CP2130::SPIDelays CP2130::getSPIDelays(uint8_t channel, int &errcnt, std::string
 {
     SPIDelays delays;
     if (channel > 10) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In getSPIDelays(): SPI channel value must be between 0 and 10.\n";  // Program logic error
         delays = {false, false, false, false, 0x0000, 0x0000, 0x0000};
     } else {
@@ -622,7 +622,7 @@ CP2130::SPIMode CP2130::getSPIMode(uint8_t channel, int &errcnt, std::string &er
 {
     SPIMode mode;
     if (channel > 10) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In getSPIMode(): SPI channel value must be between 0 and 10.\n";  // Program logic error
         mode = {false, 0x00, false, false};
     } else {
@@ -738,7 +738,7 @@ void CP2130::reset(int &errcnt, std::string &errstr)
 void CP2130::selectCS(uint8_t channel, int &errcnt, std::string &errstr)
 {
     if (channel > 10) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In selectCS(): SPI channel value must be between 0 and 10.\n";  // Program logic error
     } else {
         unsigned char controlBufferOut[SET_GPIO_CHIP_SELECT_WLEN] = {
@@ -992,7 +992,7 @@ void CP2130::writeManufacturerDesc(const std::u16string &manufacturer, int &errc
 {
     size_t strsize = manufacturer.size();
     if (strsize > DESCMXL_MANUFACTURER) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In writeManufacturerDesc(): manufacturer descriptor string cannot be longer than 62 characters.\n";  // Program logic error
     } else {
         writeDescGeneric(manufacturer, SET_MANUFACTURING_STRING_1, errcnt, errstr);  // Refactored in version 1.1.0
@@ -1028,7 +1028,7 @@ void CP2130::writeProductDesc(const std::u16string &product, int &errcnt, std::s
 {
     size_t strsize = product.size();
     if (strsize > DESCMXL_PRODUCT) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In writeProductDesc(): product descriptor string cannot be longer than 62 characters.\n";  // Program logic error
     } else {
         writeDescGeneric(product, SET_PRODUCT_STRING_1, errcnt, errstr);  // Refactored in version 1.1.0
@@ -1052,7 +1052,7 @@ void CP2130::writeSerialDesc(const std::u16string &serial, int &errcnt, std::str
 {
     size_t strsize = serial.size();
     if (strsize > DESCMXL_SERIAL) {
-        errcnt += 1;
+        ++errcnt;
         errstr += "In writeSerialDesc(): serial descriptor string cannot be longer than 30 characters.\n";  // Program logic error
     } else {
         writeDescGeneric(serial, SET_SERIAL_STRING, errcnt, errstr);  // Refactored in version 1.1.0
@@ -1080,17 +1080,17 @@ std::list<std::string> CP2130::listDevices(uint16_t vid, uint16_t pid, int &errc
     std::list<std::string> devices;
     libusb_context *context;
     if (libusb_init(&context) != 0) {  // Initialize libusb. In case of failure
-        errcnt += 1;
+        ++errcnt;
         errstr += "Could not initialize libusb.\n";
     } else {  // If libusb is initialized
         libusb_device **devs;
         ssize_t devlist = libusb_get_device_list(context, &devs);  // Get a device list
         if (devlist < 0) {  // If the previous operation fails to get a device list
-            errcnt += 1;
+            ++errcnt;
             errstr += "Failed to retrieve a list of devices.\n";
         } else {
             for (ssize_t i = 0; i < devlist; ++i) {  // Run through all listed devices
-                struct libusb_device_descriptor desc;
+                libusb_device_descriptor desc;
                 if (libusb_get_device_descriptor(devs[i], &desc) == 0 && desc.idVendor == vid && desc.idProduct == pid) {  // If the device descriptor is retrieved, and both VID and PID correspond to the respective given values
                     libusb_device_handle *handle;
                     if (libusb_open(devs[i], &handle) == 0) {  // Open the listed device. If successfull
