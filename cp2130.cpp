@@ -990,8 +990,7 @@ void CP2130::writeLockWord(uint16_t word, int &errcnt, std::string &errstr)
 // Writes the manufacturer descriptor to the CP2130 OTP ROM
 void CP2130::writeManufacturerDesc(const std::u16string &manufacturer, int &errcnt, std::string &errstr)
 {
-    size_t strsize = manufacturer.size();
-    if (strsize > DESCMXL_MANUFACTURER) {
+    if (manufacturer.size() > DESCMXL_MANUFACTURER) {
         ++errcnt;
         errstr += "In writeManufacturerDesc(): manufacturer descriptor string cannot be longer than 62 characters.\n";  // Program logic error
     } else {
@@ -1026,8 +1025,7 @@ void CP2130::writePinConfig(const PinConfig &config, int &errcnt, std::string &e
 // Writes the product descriptor to the CP2130 OTP ROM
 void CP2130::writeProductDesc(const std::u16string &product, int &errcnt, std::string &errstr)
 {
-    size_t strsize = product.size();
-    if (strsize > DESCMXL_PRODUCT) {
+    if (product.size() > DESCMXL_PRODUCT) {
         ++errcnt;
         errstr += "In writeProductDesc(): product descriptor string cannot be longer than 62 characters.\n";  // Program logic error
     } else {
@@ -1050,8 +1048,7 @@ void CP2130::writePROMConfig(const PROMConfig &config, int &errcnt, std::string 
 // Writes the serial descriptor to the CP2130 OTP ROM
 void CP2130::writeSerialDesc(const std::u16string &serial, int &errcnt, std::string &errstr)
 {
-    size_t strsize = serial.size();
-    if (strsize > DESCMXL_SERIAL) {
+    if (serial.size() > DESCMXL_SERIAL) {
         ++errcnt;
         errstr += "In writeSerialDesc(): serial descriptor string cannot be longer than 30 characters.\n";  // Program logic error
     } else {
