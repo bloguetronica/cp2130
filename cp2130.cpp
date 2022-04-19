@@ -1,4 +1,4 @@
-/* CP2130 class - Version 1.2.1
+/* CP2130 class - Version 1.2.2
    Copyright (c) 2021-2022 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
@@ -408,7 +408,7 @@ bool CP2130::getCS(uint8_t channel, int &errcnt, std::string &errstr)
     } else {
         unsigned char controlBufferIn[GET_GPIO_CHIP_SELECT_WLEN];
         controlTransfer(GET, GET_GPIO_CHIP_SELECT, 0x0000, 0x0000, controlBufferIn, GET_GPIO_CHIP_SELECT_WLEN, errcnt, errstr);
-        cs = (0x01 << channel & (controlBufferIn[0] << 8 | controlBufferIn[1])) != 0x00;
+        cs = (0x0001 << channel & (controlBufferIn[0] << 8 | controlBufferIn[1])) != 0x0000;
     }
     return cs;
 }
@@ -432,7 +432,7 @@ CP2130::EventCounter CP2130::getEventCounter(int &errcnt, std::string &errstr)
     controlTransfer(GET, GET_EVENT_COUNTER, 0x0000, 0x0000, controlBufferIn, GET_EVENT_COUNTER_WLEN, errcnt, errstr);
     CP2130::EventCounter evtcntr;
     evtcntr.overflow = (0x80 & controlBufferIn[0]) != 0x00;                               // Event counter overflow bit corresponds to bit 7 of byte 0
-    evtcntr.mode = 0x07 & controlBufferIn[0];                                             // GPIO.4/EVTCNTR pin mode corresponds to bits 2:0 of byte 0
+    evtcntr.mode = static_cast<uint8_t>(0x07 & controlBufferIn[0]);                       // GPIO.4/EVTCNTR pin mode corresponds to bits 2:0 of byte 0
     evtcntr.value = static_cast<uint16_t>(controlBufferIn[1] << 8 | controlBufferIn[2]);  // Event count value corresponds to bytes 1 and 2 (big-endian conversion)
     return evtcntr;
 }
@@ -628,10 +628,10 @@ CP2130::SPIMode CP2130::getSPIMode(uint8_t channel, int &errcnt, std::string &er
     } else {
         unsigned char controlBufferIn[GET_SPI_WORD_WLEN];
         controlTransfer(GET, GET_SPI_WORD, 0x0000, 0x0000, controlBufferIn, GET_SPI_WORD_WLEN, errcnt, errstr);
-        mode.csmode = (0x08 & controlBufferIn[channel]) != 0x00;  // Chip select mode corresponds to bit 3
-        mode.cfrq = 0x07 & controlBufferIn[channel];              // Clock frequency is set in the bits 2:0
-        mode.cpha = (0x20 & controlBufferIn[channel]) != 0x00;    // Clock phase corresponds to bit 5
-        mode.cpol = (0x10 &controlBufferIn[channel]) != 0x00;     // Clock polarity corresponds to bit 4
+        mode.csmode = (0x08 & controlBufferIn[channel]) != 0x00;            // Chip select mode corresponds to bit 3
+        mode.cfrq = static_cast<uint8_t>(0x07 & controlBufferIn[channel]);  // Clock frequency is set in the bits 2:0
+        mode.cpha = (0x20 & controlBufferIn[channel]) != 0x00;              // Clock phase corresponds to bit 5
+        mode.cpol = (0x10 &controlBufferIn[channel]) != 0x00;               // Clock polarity corresponds to bit 4
     }
     return mode;
 }
