@@ -49,9 +49,9 @@ std::u16string CP2130::getDescGeneric(uint8_t command, int &errcnt, std::string 
         }
     }
     if ((command == GET_MANUFACTURING_STRING_1 || command == GET_PRODUCT_STRING_1) && length > DESC_MAXIDX) {
-        uint16_t midchar = controlBufferIn[DESC_MAXIDX];  // Char in the middle (parted between two tables)
+        char16_t midchar = controlBufferIn[DESC_MAXIDX];  // Char in the middle (parted between two tables)
         controlTransfer(GET, command + 2, 0x0000, 0x0000, controlBufferIn, DESC_TBLSIZE, errcnt, errstr);
-        midchar = static_cast<uint16_t>(controlBufferIn[0] << 8 | midchar);  // Reconstruct the char in the middle
+        midchar = static_cast<char16_t>(controlBufferIn[0] << 8 | midchar);  // Reconstruct the char in the middle
         if (midchar != 0x0000) {  // Filter out the reconstructed char if the same is null
             descriptor += midchar;
         }
@@ -955,8 +955,9 @@ std::vector<uint8_t> CP2130::spiWriteRead(const std::vector<uint8_t> &data, uint
         unsigned char *writeReadInputBuffer = new unsigned char[payload];
         int bytesRead = 0;  // Important!
         bulkTransfer(endpointInAddr, writeReadInputBuffer, payload, &bytesRead, errcnt, errstr);
+        retdata.resize(static_cast<size_t>(bytesRead));  // Optimization implemented in version 1.2.2
         for (int i = 0; i < bytesRead; ++i) {
-            retdata.push_back(writeReadInputBuffer[i]);
+            retdata[i] = writeReadInputBuffer[i];  // Note that std::vector::push_back() is no longer used since version 1.2.2, because it is more efficient to resize the vector just once (see above), so that the values can be simply assigned
         }
         delete[] writeReadInputBuffer;
         bytesLeft -= payload;
