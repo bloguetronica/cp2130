@@ -1,4 +1,4 @@
-/* CP2130 class - Version 1.2.2
+/* CP2130 class - Version 1.2.3
    Copyright (c) 2021-2022 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
@@ -234,13 +234,13 @@ void CP2130::bulkTransfer(uint8_t endpointAddr, unsigned char *data, int length,
             std::ostringstream stream;
             if (endpointAddr < 0x80) {
                 stream << "Failed bulk OUT transfer to endpoint "
-                       << (0x0F & endpointAddr)
+                       << (0x0f & endpointAddr)
                        << " (address 0x"
                        << std::hex << std::setfill ('0') << std::setw(2) << static_cast<int>(endpointAddr)
                        << ")." << std::endl;
             } else {
                 stream << "Failed bulk IN transfer from endpoint "
-                       << (0x0F & endpointAddr)
+                       << (0x0f & endpointAddr)
                        << " (address 0x"
                        << std::hex << std::setfill ('0') << std::setw(2) << static_cast<int>(endpointAddr)
                        << ")." << std::endl;
@@ -661,7 +661,7 @@ CP2130::USBConfig CP2130::getUSBConfig(int &errcnt, std::string &errstr)
 // Returns true is the OTP ROM of the CP2130 was never written
 bool CP2130::isOTPBlank(int &errcnt, std::string &errstr)
 {
-    return getLockWord(errcnt, errstr) == 0xFFFF;
+    return getLockWord(errcnt, errstr) == 0xffff;
 }
 
 // Returns true is the OTP ROM of the CP2130 is locked
@@ -876,7 +876,7 @@ std::vector<uint8_t> CP2130::spiRead(uint32_t bytesToRead, uint8_t endpointInAdd
     unsigned char *readInputBuffer = new unsigned char[bytesToRead];  // Allocated dynamically since version 1.1.0
     int bytesRead = 0;  // Important!
     bulkTransfer(endpointInAddr, readInputBuffer, static_cast<int>(bytesToRead), &bytesRead, errcnt, errstr);
-    std::vector<uint8_t> retdata(bytesRead);
+    std::vector<uint8_t> retdata(static_cast<size_t>(bytesRead));
     for (int i = 0; i < bytesRead; ++i) {
         retdata[i] = readInputBuffer[i];
     }
@@ -895,8 +895,8 @@ std::vector<uint8_t> CP2130::spiRead(uint32_t bytesToRead, int &errcnt, std::str
 void CP2130::spiWrite(const std::vector<uint8_t> &data, uint8_t endpointOutAddr, int &errcnt, std::string &errstr)
 {
     uint32_t bytesToWrite = static_cast<uint32_t>(data.size());
-    int bufsize = bytesToWrite + 8;
-    unsigned char *writeCommandBuffer = new unsigned char[bufsize] {  // Allocated dynamically since version 1.1.0
+    int bufSize = bytesToWrite + 8;
+    unsigned char *writeCommandBuffer = new unsigned char[bufSize] {  // Allocated dynamically since version 1.1.0
         0x00, 0x00,     // Reserved
         CP2130::WRITE,  // Write command
         0x00,           // Reserved
@@ -909,10 +909,10 @@ void CP2130::spiWrite(const std::vector<uint8_t> &data, uint8_t endpointOutAddr,
         writeCommandBuffer[i + 8] = data[i];
     }
 #if LIBUSB_API_VERSION >= 0x01000105
-    bulkTransfer(endpointOutAddr, writeCommandBuffer, bufsize, nullptr, errcnt, errstr);
+    bulkTransfer(endpointOutAddr, writeCommandBuffer, bufSize, nullptr, errcnt, errstr);
 #else
     int bytesWritten;
-    bulkTransfer(endpointOutAddr, writeCommandBuffer, bufsize, &bytesWritten, errcnt, errstr);
+    bulkTransfer(endpointOutAddr, writeCommandBuffer, bufSize, &bytesWritten, errcnt, errstr);
 #endif
     delete[] writeCommandBuffer;
 }
@@ -928,12 +928,13 @@ void CP2130::spiWrite(const std::vector<uint8_t> &data, int &errcnt, std::string
 std::vector<uint8_t> CP2130::spiWriteRead(const std::vector<uint8_t> &data, uint8_t endpointInAddr, uint8_t endpointOutAddr, int &errcnt, std::string &errstr)
 {
     size_t bytesToWriteRead = data.size();
-    size_t bytesLeft = bytesToWriteRead;
+    size_t bytesProcessed = 0;  // Loop control variable implemented in version 1.2.3, to replace "bytesLeft"
     std::vector<uint8_t> retdata;
-    while (bytesLeft > 0) {
-        int payload = bytesLeft > 56 ? 56 : bytesLeft;
-        int bufsize = payload + 8;
-        unsigned char *writeReadCommandBuffer = new unsigned char[bufsize] {
+    while (bytesProcessed < bytesToWriteRead) {
+        size_t bytesRemaining = bytesToWriteRead - bytesProcessed;  // Equivalent to the variable "bytesLeft" found in version 1.2.2, except that it is no longer used for control
+        uint32_t payload = static_cast<uint32_t>(bytesRemaining > 56 ? 56 : bytesRemaining);
+        int bufSize = payload + 8;
+        unsigned char *writeReadCommandBuffer = new unsigned char[bufSize] {
             0x00, 0x00,         // Reserved
             CP2130::WRITEREAD,  // WriteRead command
             0x00,               // Reserved
@@ -942,25 +943,26 @@ std::vector<uint8_t> CP2130::spiWriteRead(const std::vector<uint8_t> &data, uint
             static_cast<uint8_t>(payload >> 16),
             static_cast<uint8_t>(payload >> 24)
         };
-        for (int i = 0; i < payload; ++i) {
-            writeReadCommandBuffer[i + 8] = data[bytesToWriteRead - bytesLeft + i];
+        for (size_t i = 0; i < payload; ++i) {
+            writeReadCommandBuffer[i + 8] = data[bytesProcessed + i];
         }
 #if LIBUSB_API_VERSION >= 0x01000105
-        bulkTransfer(endpointOutAddr, writeReadCommandBuffer, bufsize, nullptr, errcnt, errstr);
+        bulkTransfer(endpointOutAddr, writeReadCommandBuffer, bufSize, nullptr, errcnt, errstr);
 #else
         int bytesWritten;
-        bulkTransfer(endpointOutAddr, writeReadCommandBuffer, bufsize, &bytesWritten, errcnt, errstr);
+        bulkTransfer(endpointOutAddr, writeReadCommandBuffer, bufSize, &bytesWritten, errcnt, errstr);
 #endif
         delete[] writeReadCommandBuffer;
         unsigned char *writeReadInputBuffer = new unsigned char[payload];
         int bytesRead = 0;  // Important!
         bulkTransfer(endpointInAddr, writeReadInputBuffer, payload, &bytesRead, errcnt, errstr);
-        retdata.resize(static_cast<size_t>(bytesRead));  // Optimization implemented in version 1.2.2
+        size_t prevretdataSize = retdata.size();
+        retdata.resize(static_cast<size_t>(prevretdataSize + bytesRead));  // Optimization implemented in version 1.2.2, and fixed in version 1.2.3
         for (int i = 0; i < bytesRead; ++i) {
-            retdata[i] = writeReadInputBuffer[i];  // Note that std::vector::push_back() is no longer used since version 1.2.2, because it is more efficient to resize the vector just once (see above), so that the values can be simply assigned
+            retdata[prevretdataSize + i] = writeReadInputBuffer[i];  // Note that std::vector::push_back() is no longer used since version 1.2.2, because it is more efficient to resize the vector only once per iteration (see above), so that the values may be simply assigned (fixed in version 1.2.3)
         }
         delete[] writeReadInputBuffer;
-        bytesLeft -= payload;
+        bytesProcessed += payload;  // Note that, since version 1.2.3, the loop control variable is added to (it is generaly a bad idea to subtract from a unsigned variable, because it can lead to a overflow that may go unchecked)
     }
     return retdata;
 }
@@ -1015,10 +1017,10 @@ void CP2130::writePinConfig(const PinConfig &config, int &errcnt, std::string &e
         config.gpio8,                                                                                // GPIO.8 pin config
         config.gpio9,                                                                                // GPIO.9 pin config
         config.gpio10,                                                                               // GPIO.10 pin config
-        static_cast<uint8_t>(0x7F & config.sspndlvl >> 8), static_cast<uint8_t>(config.sspndlvl),    // Suspend pin level bitmap
+        static_cast<uint8_t>(0x7f & config.sspndlvl >> 8), static_cast<uint8_t>(config.sspndlvl),    // Suspend pin level bitmap
         static_cast<uint8_t>(config.sspndmode >> 8), static_cast<uint8_t>(config.sspndmode),         // Suspend pin mode bitmap
-        static_cast<uint8_t>(0x7F & config.wkupmask >> 8), static_cast<uint8_t>(config.wkupmask),    // Wakeup pin mask bitmap
-        static_cast<uint8_t>(0x7F & config.wkupmatch >> 8), static_cast<uint8_t>(config.wkupmatch),  // Wakeup pin match bitmap
+        static_cast<uint8_t>(0x7f & config.wkupmask >> 8), static_cast<uint8_t>(config.wkupmask),    // Wakeup pin mask bitmap
+        static_cast<uint8_t>(0x7f & config.wkupmatch >> 8), static_cast<uint8_t>(config.wkupmatch),  // Wakeup pin match bitmap
         config.divider                                                                               // Clock divider
     };
     controlTransfer(SET, SET_PIN_CONFIG, PROM_WRITE_KEY, 0x0000, controlBufferOut, SET_PIN_CONFIG_WLEN, errcnt, errstr);
@@ -1068,7 +1070,7 @@ void CP2130::writeUSBConfig(const USBConfig &config, uint8_t mask, int &errcnt, 
         config.powmode,                                                           // Power mode
         config.majrel, config.minrel,                                             // Major and minor release versions
         config.trfprio,                                                           // Transfer priority
-        mask                                                                      // Write mask (can be obtained using the return value of getLockWord(), after being bitwise ANDed with "LWUSBCFG" [0x009F] and the resulting value cast to uint8_t)
+        mask                                                                      // Write mask (can be obtained using the return value of getLockWord(), after being bitwise ANDed with "LWUSBCFG" [0x009f] and the resulting value cast to uint8_t)
     };
     controlTransfer(SET, SET_USB_CONFIG, PROM_WRITE_KEY, 0x0000, controlBufferOut, SET_USB_CONFIG_WLEN, errcnt, errstr);
 }
