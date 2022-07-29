@@ -1,4 +1,4 @@
-/* CP2130 class - Version 1.2.3
+/* CP2130 class - Version 1.2.4
    Copyright (c) 2021-2022 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
@@ -930,7 +930,8 @@ std::vector<uint8_t> CP2130::spiWriteRead(const std::vector<uint8_t> &data, uint
     size_t bytesToWriteRead = data.size();
     size_t bytesProcessed = 0;  // Loop control variable implemented in version 1.2.3, to replace "bytesLeft"
     std::vector<uint8_t> retdata;
-    while (bytesProcessed < bytesToWriteRead) {
+    int preverrcnt = errcnt;
+    while (bytesProcessed < bytesToWriteRead && preverrcnt == errcnt) {  // The extra condition breaks the loop in case of error (added in version 1.2.4)
         size_t bytesRemaining = bytesToWriteRead - bytesProcessed;  // Equivalent to the variable "bytesLeft" found in version 1.2.2, except that it is no longer used for control
         uint32_t payload = static_cast<uint32_t>(bytesRemaining > 56 ? 56 : bytesRemaining);
         int bufSize = payload + 8;
