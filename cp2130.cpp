@@ -1,4 +1,4 @@
-/* CP2130 class - Version 1.2.4
+/* CP2130 class - Version 1.2.5
    Copyright (c) 2021-2022 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
@@ -605,7 +605,7 @@ CP2130::SPIDelays CP2130::getSPIDelays(uint8_t channel, int &errcnt, std::string
         delays = {false, false, false, false, 0x0000, 0x0000, 0x0000};
     } else {
         unsigned char controlBufferIn[GET_SPI_DELAY_WLEN];
-        controlTransfer(GET, GET_SPI_DELAY, 0x0000, 0x0000, controlBufferIn, GET_SPI_DELAY_WLEN, errcnt, errstr);
+        controlTransfer(GET, GET_SPI_DELAY, 0x0000, channel, controlBufferIn, GET_SPI_DELAY_WLEN, errcnt, errstr);  // The value of "channel" is now passed to "wIndex" in controlTransfer(), as it should (fixed in version 1.2.5)
         delays.cstglen = (0x08 & controlBufferIn[1]) != 0x00;                                    // CS toggle enable corresponds to bit 3 of byte 1
         delays.prdasten = (0x04 & controlBufferIn[1]) != 0x00;                                   // Pre-deassert delay enable corresponds to bit 2 of byte 1
         delays.pstasten = (0x02 & controlBufferIn[1]) != 0x00;                                   // Post-assert delay enable to bit 1 of byte 1

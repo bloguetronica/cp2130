@@ -1,4 +1,4 @@
-/* CP2130 class - Version 1.2.4
+/* CP2130 class - Version 1.2.5
    Copyright (c) 2021-2022 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
