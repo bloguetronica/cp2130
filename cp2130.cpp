@@ -1,5 +1,5 @@
-/* CP2130 class - Version 1.2.5
-   Copyright (c) 2021-2022 Samuel Lourenço
+/* CP2130 class - Version 1.2.6
+   Copyright (c) 2021-2024 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published by
@@ -631,7 +631,7 @@ CP2130::SPIMode CP2130::getSPIMode(uint8_t channel, int &errcnt, std::string &er
         mode.csmode = (0x08 & controlBufferIn[channel]) != 0x00;            // Chip select mode corresponds to bit 3
         mode.cfrq = static_cast<uint8_t>(0x07 & controlBufferIn[channel]);  // Clock frequency is set in the bits 2:0
         mode.cpha = (0x20 & controlBufferIn[channel]) != 0x00;              // Clock phase corresponds to bit 5
-        mode.cpol = (0x10 &controlBufferIn[channel]) != 0x00;               // Clock polarity corresponds to bit 4
+        mode.cpol = (0x10 & controlBufferIn[channel]) != 0x00;              // Clock polarity corresponds to bit 4
     }
     return mode;
 }
