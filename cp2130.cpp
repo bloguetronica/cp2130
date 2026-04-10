@@ -1,5 +1,5 @@
-/* CP2130 class - Version 1.2.6
-   Copyright (c) 2021-2024 Samuel Lourenço
+/* CP2130 class - Version 1.2.7
+   Copyright (c) 2021-2026 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published by
@@ -689,7 +689,7 @@ void CP2130::lockOTP(int &errcnt, std::string &errstr)
 int CP2130::open(uint16_t vid, uint16_t pid, const std::string &serial)
 {
     int retval;
-    if (isOpen()) {  // Just in case the calling algorithm tries to open a device that was already sucessfully open, or tries to open different devices concurrently, all while using (or referencing to) the same object
+    if (isOpen()) {  // Just in case the calling algorithm tries to open a device that was already successfully open, or tries to open different devices concurrently, all while using (or referencing to) the same object
         retval = SUCCESS;
     } else if (libusb_init(&context_) != 0) {  // Initialize libusb. In case of failure
         retval = ERROR_INIT;
