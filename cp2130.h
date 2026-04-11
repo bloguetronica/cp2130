@@ -326,7 +326,7 @@ public:
         bool operator !=(const USBConfig &other) const;
     };
 
-    CP2130();
+    explicit CP2130();  // Explicit since version 1.2.7
     ~CP2130();
 
     bool disconnected() const;
