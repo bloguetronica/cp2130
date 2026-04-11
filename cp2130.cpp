@@ -28,6 +28,7 @@ extern "C" {
 }
 
 // Definitions
+const int IFACE = 0;                  // Interface number (implemented in version 1.2.7)
 const unsigned int TR_TIMEOUT = 500;  // Transfer timeout in milliseconds
 
 // Specific to getDescGeneric() and writeDescGeneric() (added in version 1.1.0)
@@ -257,9 +258,9 @@ void CP2130::bulkTransfer(uint8_t endpointAddr, unsigned char *data, int length,
 void CP2130::close()
 {
     if (isOpen()) {  // This condition avoids a segmentation fault if the calling algorithm tries, for some reason, to close the same device twice (e.g., if the device is already closed when the destructor is called)
-        libusb_release_interface(handle_, 0);  // Release the interface
+        libusb_release_interface(handle_, IFACE);  // Release the interface (modified in version 1.2.7)
         if (kernelWasAttached_) {  // If a kernel driver was attached to the interface before
-            libusb_attach_kernel_driver(handle_, 0);  // Reattach the kernel driver
+            libusb_attach_kernel_driver(handle_, IFACE);  // Reattach the kernel driver (modified in version 1.2.7)
         }
         libusb_close(handle_);  // Close the device
         libusb_exit(context_);  // Deinitialize libusb
@@ -706,15 +707,15 @@ int CP2130::open(uint16_t vid, uint16_t pid, const std::string &serial)
             libusb_exit(context_);  // Deinitialize libusb
             retval = ERROR_NOT_FOUND;
         } else {  // If the device is successfully opened and a handle obtained
-            if (libusb_kernel_driver_active(handle_, 0) == 1) {  // If a kernel driver is active on the interface
-                libusb_detach_kernel_driver(handle_, 0);  // Detach the kernel driver
+            if (libusb_kernel_driver_active(handle_, IFACE) == 1) {  // If a kernel driver is active on the interface (modified in version 1.2.7)
+                libusb_detach_kernel_driver(handle_, IFACE);  // Detach the kernel driver (modified in version 1.2.7)
                 kernelWasAttached_ = true;  // Flag that the kernel driver was attached
             } else {
                 kernelWasAttached_ = false;  // The kernel driver was not attached
             }
-            if (libusb_claim_interface(handle_, 0) != 0) {  // Claim the interface. In case of failure
+            if (libusb_claim_interface(handle_, IFACE) != 0) {  // Claim the interface. In case of failure (modified in version 1.2.7)
                 if (kernelWasAttached_) {  // If a kernel driver was attached to the interface before
-                    libusb_attach_kernel_driver(handle_, 0);  // Reattach the kernel driver
+                    libusb_attach_kernel_driver(handle_, IFACE);  // Reattach the kernel driver (modified in version 1.2.7)
                 }
                 libusb_close(handle_);  // Close the device
                 libusb_exit(context_);  // Deinitialize libusb
