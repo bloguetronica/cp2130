@@ -1,5 +1,5 @@
-/* CP2130 class - Version 1.2.6
-   Copyright (c) 2021-2024 Samuel Lourenço
+/* CP2130 class - Version 1.2.7
+   Copyright (c) 2021-2026 Samuel Lourenço
 
    This library is free software: you can redistribute it and/or modify it
    under the terms of the GNU Lesser General Public License as published by
@@ -326,7 +326,7 @@ public:
         bool operator !=(const USBConfig &other) const;
     };
 
-    CP2130();
+    explicit CP2130();  // Explicit since version 1.2.7
     ~CP2130();
 
     bool disconnected() const;
